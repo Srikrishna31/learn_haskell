@@ -1,4 +1,3 @@
-import qualified Control.Applicative as instances
 {-
 List Types
 A `list` is a sequence of elements of the same type, with the elements being enclosed in square
@@ -209,4 +208,64 @@ support the methods of fractional division and fractional reciprocation:
 (/) :: a -> a -> a
 
 recip :: a -> a
+-}
+
+
+{- Exercises
+
+Write down definitions that have the following types; it doesnot matter what the 
+definitions actually do as long as they are type correct.
+
+bools:: [Bool]
+-}
+bools = [True, False, True]
+
+-- nums :: [[Int]]
+nums::[[Int]]
+nums = [[1,2,3], [4,5,6], [7,8,9]]
+
+
+-- using add as in question is giving an error, so name the function as addCustom
+addCustom :: Int -> Int -> Int -> Int
+addCustom a b c = a + b + c
+
+
+apply :: (a -> b) -> a -> b
+apply f a = f(a)
+
+
+{- 
+Whate are the types of the following functions?
+Hint: take care to include the necessary class constraints in the types if the 
+    functions are defined using overload operators.
+-}
+
+-- second:: [a] -> a
+second xs = head (tail xs)
+
+-- swap :: (a, b) -> (b, a)
+swap (x, y) = (y,x)
+
+-- pair :: a -> b -> (a,b)
+pair x y = (x,y)
+
+-- double :: Num a => a -> a
+double x = x * 2
+
+-- palindrome :: [a] -> Bool
+palindrome xs = reverse xs == xs
+
+-- twice :: (a -> b) -> a -> b
+twice f x = f (f x)
+
+
+{-
+Why is it not feasible in general for function types to be instances of the Eq
+class? When is it feasible?
+
+In general, functions are equal when they produce equal results for equal arguments.
+Since the argument combinations can explode, in general it is not feasible to 
+check them thoroughly for all combinations.
+On the other hand, if the argument types have few values e.g. Bool or Enumerations,
+    then it might be feasible to check for equality of functions.
 -}
