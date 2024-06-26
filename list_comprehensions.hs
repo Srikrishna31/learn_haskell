@@ -1,5 +1,7 @@
-import Data.Char
 -- List Comprehensions
+
+import Data.Char
+    ( ord, chr, isAlpha, isLower, isUpper, toLower, isAsciiLower )
 
 {-
 Basic Concepts
@@ -120,7 +122,8 @@ lowers xs = Prelude.length [x | x <- xs, isAsciiLower x]
 count :: Char -> String -> Int
 count x xs = Prelude.length [x' | x' <- xs, x == x']
 
-
+toLower :: String -> String
+toLower xs = [Data.Char.toLower x | x <- xs]
 
 {-
 The Caesar Cipher
@@ -132,14 +135,16 @@ be replaced by any integer between one and twenty-five, there by
 giving twenty-five different ways of encoding a string.
 -}
 let2int :: Char -> Int
-let2int c = ord c - ord 'a'
+let2int c | isLower c = ord c - ord 'a'
+          | otherwise = ord c - ord 'A'
 
-int2let :: Int -> Char
-int2let n = chr (ord 'a' + n)
+int2let :: Int -> Bool -> Char
+int2let n upper | upper = chr (ord 'A' + n)
+                | otherwise = chr(ord 'a' + n)
 
 
 shift :: Int -> Char -> Char
-shift n c | isLower c = int2let ((let2int c + n) `mod` 26)
+shift n c | isAlpha c = int2let ((let2int c + n) `mod` 26) (isUpper c)
           | otherwise = c
 
 
@@ -178,7 +183,7 @@ percent n m = (fromIntegral n / fromIntegral m) * 100
 -- number is used within the list comprehension.
 freqs :: String -> [Float]
 freqs xs = [percent (count x xs) n | x <- ['a'..'z']]
-          where n = lowers xs
+          where n = lowers (Main.toLower xs)
 
 
 {-
@@ -287,3 +292,15 @@ given by the sum of the products of corresponding integers:
 -}
 scalarproduct :: [Int] -> [Int] -> Int
 scalarproduct xs ys = sum [x*y | (x,y) <- zip xs ys]
+
+{-
+Show how the list comprehension [(x,y) | x <- [1,2], y <- [3,4]] with
+two generators can be re-expressed using two comprehensions with
+single generators.
+Hint: nest one comprehension within the other and make use of the 
+library function concat :: [[a]] -> [a].
+-}
+lcp = [(x,y) | x <- [1,2], y <- [3,4]]
+-- Solution taken from here:
+-- https://github.com/singleheart/programming-in-haskell/blob/master/ch05/ex7.hs
+lcx = Main.concat [[(x,y) | y <- [3,4]] | x <- [1,2]]
