@@ -279,22 +279,23 @@ library functions on lists using recursion.
 
 a. Decide if all logical values in a list are True.
 -}
-and :: [Bool] -> Bool
-and [] = False
-and (x: xs) | not x = False
-            | otherwise = Main.and xs
+and' :: [Bool] -> Bool
+and' [] = False
+and' (x: xs) | not x = False
+             | otherwise = and' xs
 
 
 -- b. Concatenate a list of lists:
+-- Solution taken from: https://github.com/singleheart/programming-in-haskell/blob/master/ch06/ex6b.hs
 concat' :: [[a]] -> [a]
-concat' [[]] = []
-concat' [[], x:xs, xss]  = x : concat' [xs, xss]
-concat' [x:xs, xss] = x : concat' [xs, xss]
+concat' [] = []
+concat' [x]  = x
+concat' (x:xs) = x Main.++ concat' xs
 
 -- c. Produce a list with n identical elements:
-replicate :: Int -> a -> [a]
-replicate 0 _ = []
-replicate n a = a : Main.replicate (n-1) a
+replicate' :: Int -> a -> [a]
+replicate' 0 _ = []
+replicate' n a = a : replicate' (n-1) a
 
 
 -- d. Select the nth element of a list
@@ -304,10 +305,10 @@ replicate n a = a : Main.replicate (n-1) a
               | otherwise = xs Main.!! (n - 1)
 
 -- e. Decide if a value is an element of a list:
-elem :: Eq a => a -> [a] -> Bool
-elem  _ [] = False
-elem a (b:bs) | a == b = True
-              | otherwise = Main.elem a bs
+elem' :: Eq a => a -> [a] -> Bool
+elem'  _ [] = False
+elem' a (b:bs) | a == b = True
+              | otherwise = elem' a bs
 
 
 {-
