@@ -1,4 +1,6 @@
-import Data.Text.Internal.Fusion.Size (larger)
+import GHC.Float (int2Float, float2Int)
+import System.Win32 (xBUTTON1)
+import Distribution.Compat.Lens (_1)
 -- Recursive Functions
 
 {-
@@ -7,9 +9,15 @@ Basic Concepts
 In Haskell, it is permissible to define functions in terms of
 themselves, in which case the functions are called recursive.
 -}
+{-
+How does the recursive version of the factorial function behave if applied to a
+negative argument, such as (-1)? Modify the definition to prohibit negative 
+arguments by adding a guard to the recursive case.
+-}
 fac:: Int -> Int
 fac 0 = 1
-fac n = n Prelude.* fac (n - 1)
+fac n | n < 0 = n -- return the same integer if the passed in value is negative.
+      | otherwise = n Prelude.* fac (n - 1)
 
 {- 
 The first equation states that the factorial of zero is one,
@@ -196,3 +204,161 @@ follows:
 init' :: [a] -> [a]
 init' [_] = []
 init' (x:xs) = x : init' xs
+
+
+{-
+Define a recursive function sumdown :: Int -> Int that returns the sum of the 
+non-negative integers from a given value down to zero.
+-}
+sumdown :: Int -> Int
+sumdown 0 = 0
+sumdown n | n > 0 = n + sumdown (n - 1)
+          | otherwise = n -- for negative inputs, return the same value.
+
+{-
+Define the exponentiation operator ^ for non-negative integers using the same
+pattern of recursion as the multiplication operator *, and show how the 
+expression 2 ^ 3 is evaluated using your definition
+-}
+(^) :: Int -> Int -> Float
+(^) _ 0 = 1
+(^) x y | y < 0 = recip (x Main.^ abs y)
+        | otherwise = int2Float (x Main.* float2Int (x Main.^ (y - 1)))
+
+{-
+Define a recursive function euclid :: Int -> Int -> Int that implements 
+Euclid's algorithm for calculating the greatest common divisor of two non-negative
+integers: if the two numbers are equal, this number is the result; otherwise,
+the smaller number is subtracted from the larger, and the same process is
+repeated.
+-}
+euclid :: Int -> Int -> Int
+euclid x y | x == y = x
+           | x > y = euclid (x - y) y
+           | otherwise = euclid (y - x) x
+
+{-
+Using the recursive definitions given in this chapter, show length [1,2,3], 
+drop 3 [1,2,3,4,5], and init [1,2,3] are evaluated.
+
+length [1,2,3]
+    = {applying length}
+    1 + length [2,3]
+    = {applying length}
+    1 + 1 + length [3]
+    = {applying length}
+    1 + 1 + 1 + length []
+    = {applying length}
+    1 + 1 + 1 + 0
+    = 3
+
+drop 3 [1,2,3,4,5]
+    = {applying drop}
+    drop 2 [2,3,4,5]
+    = {applying drop}
+    drop 1 [3,4,5]
+    = {applying drop}
+    drop 0 [4,5]
+    = {applying drop}
+    [4,5]
+
+init [1,2,3]
+    = {applying init}
+    1 : init [2,3]
+    = {applying init}
+    1 : 2 : init [3]
+    = {applying init}
+    1 : 2 : []
+    = [1,2]
+-}
+
+
+{-
+Without looking at the definitions from the standard prelude, define the following
+library functions on lists using recursion.
+
+a. Decide if all logical values in a list are True.
+-}
+and :: [Bool] -> Bool
+and [] = False
+and (x: xs) | not x = False
+            | otherwise = Main.and xs
+
+
+-- b. Concatenate a list of lists:
+concat' :: [[a]] -> [a]
+concat' [[]] = []
+concat' [[], x:xs, xss]  = x : concat' [xs, xss]
+concat' [x:xs, xss] = x : concat' [xs, xss]
+
+-- c. Produce a list with n identical elements:
+replicate :: Int -> a -> [a]
+replicate 0 _ = []
+replicate n a = a : Main.replicate (n-1) a
+
+
+-- d. Select the nth element of a list
+-- (!!) :: [a] -> Int -> a
+-- (!!) [] 0
+(!!) (x:xs) n | n == 0 = x
+              | otherwise = xs Main.!! (n - 1)
+
+-- e. Decide if a value is an element of a list:
+elem :: Eq a => a -> [a] -> Bool
+elem  _ [] = False
+elem a (b:bs) | a == b = True
+              | otherwise = Main.elem a bs
+
+
+{-
+Define a recursive function merge :: Ord a => [a] -> [a] -> [a]
+that merges two sorted lists to give a single sorted list.
+-}
+merge :: Ord a => [a] -> [a] -> [a]
+merge xs [] = xs
+merge [] ys = ys
+merge (x:xs) (y:ys) | x <= y = x : merge xs (y:ys)
+                    | otherwise = y : merge (x:xs) ys
+
+
+{-
+Using merge, define a function msort :: Ord a => [a] -> [a] that
+implements merge sort, in which the empty list and singleton lists
+are already sorted, and any other list is sorted by merging together
+the two lists that result from sorting the two halves of the list
+separately.
+
+Hint: first define a function halve :: [a] -> ([a], [a]) that splits
+a list into two halves whose lengths differ by at most one.
+-}
+halve :: [a] -> ([a], [a])
+halve [] = ([], [])
+halve xs = splitAt (length xs `div` 2) xs
+
+msort :: Ord a => [a] -> [a]
+msort [] = []
+msort [a] = [a]
+msort xs = merge (msort lower) (msort upper)
+            where (upper, lower) = halve xs
+
+
+{-
+Using the five-step process, construct the library functions that:
+    a. calculate the sum of a list of numbers;
+    b. take a given number of elements from the start of a list;
+    c. select the last element of a non-empty list
+-}
+sum' :: [Int] -> Int
+sum' [] = 0
+sum' (x:xs) = x + sum' xs
+
+
+take' :: Int -> [a] -> [a]
+take' 0 _ = []
+-- take' n []  should give an error, so omit this case
+take' n (x:xs) = x : take' (n-1) xs
+
+
+last' :: [a] -> a
+last' [x] = x
+last' (_:xs) = last' xs
