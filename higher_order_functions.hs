@@ -464,3 +464,186 @@ winner' :: Ord a => [[a]] -> a
 winner' bs = case rank (rmempty bs) of
                 [c] -> c
                 (c:cs) -> winner' (elim c bs)
+
+{-
+Show how the list comprehension [f x | x <- xs, p x] can be re-expressed using the 
+higher-order functions map and filter
+-}
+filterMap :: (a -> a) -> (a -> Bool) -> [a] -> [a]
+filterMap f p = map' f Main.. filter' p
+
+
+{-
+Without looking at the definitions from the standard prelude, define the following
+higher-order library functions on lists.
+
+a. Decide if all elements of a list satisfy a prediate:
+    all :: (a -> Bool) -> [Bool] -> Bool
+
+b. Decide if any element of a list satisfies a predicate:
+    any:: (a -> Bool) -> [Bool] -> Bool
+
+c. Select elements from a list while they satisfy a predicate:
+    takeWhile :: (a -> Bool) -> [a] -> [a]
+
+d. Remove elements from a list while they satisfy a predicate:
+    dropWhile :: (a -> Bool) -> [a] -> [a]
+-}
+all :: (a -> Bool) -> [Bool] -> Bool
+all f = Main.foldl' (&&) True
+
+any :: (a -> Bool) -> [Bool] -> Bool
+any f = Main.foldl' (||) False
+
+takeWhile :: (a -> Bool) -> [a] -> [a]
+takeWhile _ [] = []
+takeWhile f (x:xs) | f x = x : Main.takeWhile f xs
+                   | otherwise = []
+
+dropWhile :: (a -> Bool) -> [a] -> [a]
+dropWhile _ [] = []
+dropWhile f (x:xs) | f x = Main.dropWhile f xs
+                   | otherwise = []
+
+
+
+{-
+Redefine the functions map f and filter p using foldr.
+-}
+map'' :: (a -> b) -> [a] -> [b]
+map'' f = foldr (\x acc -> f x : acc) []
+
+filter''' :: (a -> Bool) -> [a] -> [a]
+filter''' p = foldr (\x acc -> if p x then x : acc else acc) []
+
+
+{-
+Uisng foldl, define a function dec2int :: [Int] -> Int that converts a decimal
+number into an integer. For example:
+    > dec2int [2,3,4,5]
+    2345
+-}
+dec2int :: [Int] -> Int
+dec2int = foldl (\acc x -> x + 10 * acc) 0
+
+
+{-
+Without looking at the definitions from the standard prelude, define the 
+higher-order library function curry that converts a function on pairs into
+a curried function, and, conversely, the function uncurry that converts a 
+curried function with two arguments into a function on pairs.
+-}
+curry :: ((a,b) -> c) -> (a -> b -> c)
+curry f = \x y -> f(x,y)
+
+uncurry :: (a->b->c)-> ((a,b) ->c)
+uncurry f = \(a,b) -> f a b
+
+
+{-
+A higher-order function unfold that encapsulates a simple pattern of recursion
+for producing a list can be defined as follows:
+That is, the function unfold p h t produces the empty list if the predicate p
+is true of the argument value, and otherwise produces a non-empty list by applying
+the function h to this value to give the head, and the function t to generate 
+another argument that is recursively processed in the same way to produce the tail
+of the list. For example, the function int2bin can be rewritten more compactly
+using unfold as shown below:
+-}
+unfold :: (t -> Bool) -> (t -> a) -> (t -> t) -> t -> [a]
+unfold p h t x | p x = []
+               | otherwise = h x : unfold p h t (t x)
+
+int2bin' :: Int -> [Bit]
+int2bin' = unfold (== 0) (`mod` 2) (`div` 2)
+
+-- Redefine the functions chop8, map f and iterate f using unfold.
+chop :: Int -> [Bit] -> [[Bit]]
+chop n = unfold null (take n) (drop n)
+
+chop8' :: [Bit] -> [[Bit]]
+chop8' = chop 8
+
+map'''' :: (a -> b) -> [a] -> [b]
+map'''' f = unfold null (f Main.. head) tail 
+
+iterate' :: (a -> a) -> a -> [a]
+iterate' = unfold (const False) Main.id
+
+
+{-
+Modify the binary string transmitter example to detect simple transmission errors
+using the concept of parity bits. That is, each eight-bit binary number produced
+during encoding is extended with a parity bit, set to one if the number contains
+an odd number of ones, and to zero otherwise. In turn, each resulting nine-bit binary
+number consumed during decoding is checed to ensure that its parity bit is correct, with
+the parity bit being discarded if this is the case, and a parity error being
+reported otherwise.
+
+Hint: the library function error:: String -> a displays the given string as an 
+error message and terminates the program; the polymorphic result type ensures that
+error can be used in any context.
+-}
+parity :: [Bit] -> Bit
+parity xs | even (count 1 xs `mod` 2)  = 0
+          | otherwise = 1
+
+make8parity :: [Bit] -> [Bit]
+make8parity bits = parity bs : bs
+                        where bs = take 8 (bits ++ repeat 0)
+
+encode' :: String -> [Bit]
+encode' = concat Main.. map' (make8parity Main.. int2bin Main.. ord)
+
+chop8parity :: [Bit] -> [[Bit]]
+chop8parity = chop 9
+
+checkParity :: [Bit] -> Bool
+checkParity bs = head bs == (parity Main.. tail) bs
+
+bin2int'' :: [Bit] -> Int
+bin2int'' bs | parity (tail bs) == head bs = (bin2int Main.. tail) bs
+            | otherwise = error "Parity Error"  
+
+decodeWithParity :: [Bit] -> String
+decodeWithParity = map' (chr Main.. bin2int'') Main.. chop8parity
+
+
+{-
+Test your new string transmitter program from the previous exercise using
+a faulty communication channel that forgets the first bit, which can be 
+modelled using the tail function on lists of bits.
+-}
+channelFaulty :: [Bit] -> [Bit]
+channelFaulty = tail
+
+transmitFaulty ::String -> String
+transmitFaulty = decodeWithParity Main.. channelFaulty Main.. encode'
+
+transmitCorrect ::String -> String
+transmitCorrect = decodeWithParity Main.. channel Main.. encode' 
+
+{-
+Define a function altMap :: (a->b) -> (a->b) -> [a] -> [b] that
+alternately applies its two argument functions to successive
+elements in a list in turn about order. For example:
+    > altMap (+10) (+100) [0, 1, 2, 3, 4]
+    [10, 101, 12, 103, 14]
+-}
+altMap :: (a->b) -> (a->b) -> [a] -> [b]
+altMap _ _ [] = []
+altMap f g [x,y] = [f x , g y] 
+altMap f _ [x] = [f x]
+altMap f g (x:xs) = f x : altMap g f xs
+
+{-
+Using altMap, define a function luhn:: [Int] -> Bool that implements the
+Luhn algorithm from the exercises in chapter 4 for bank card numbers of 
+any length. Test your new function using your own bank card.
+-}
+luhnDouble :: Int -> Int
+luhnDouble b = if c < 9 then c else c - 9
+                where c = 2*b
+
+luhn :: [Int] -> Bool
+luhn xs = Main.sum (altMap luhnDouble Main.id xs) `mod` 10 == 0
