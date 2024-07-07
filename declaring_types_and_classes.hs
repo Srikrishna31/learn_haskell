@@ -126,6 +126,14 @@ New types declared using the data and newtype mechanism can also be recursive.
 -}
 data Natrl = Zero | Succ Natrl
 
+showNat :: Natrl -> String
+showNat Zero = "0"
+showNat (Succ k) = "Succ " ++ showNat k
+
+instance Show Natrl where
+    show = showNat
+
+
 nat2int :: Natrl -> Int
 nat2int Zero = 0
 nat2int (Succ n) = 1 + nat2int n
@@ -301,6 +309,8 @@ data Prop = Const Bool
           | Not Prop
           | And Prop Prop
           | Imply Prop Prop
+          | Or Prop Prop
+          | Equivalence Prop Prop
 
 
 p1 :: Prop
@@ -315,6 +325,12 @@ p3 = Imply (Var 'A') (And (Var 'A') (Var 'B'))
 p4 :: Prop
 p4 = Imply (And (Var 'A') (Imply (Var 'A') (Var 'B'))) (Var 'B')
 
+p5:: Prop
+p5 = Or (Var 'A') (Not (Var 'A'))
+
+p6:: Prop
+p6 = Equivalence (And (Var 'A') (Not (Var 'A'))) (Const False)
+
 type Subst = Assoc Char Bool
 
 -- A function that evaluates a proposition given a substitution for its
@@ -326,6 +342,8 @@ eval s (Var x) = find x s
 eval s (Not p) = not (eval s p)
 eval s (And p q) = eval s p && eval s q
 eval s (Imply p q) = eval s p Prelude.<= eval s q
+eval s (Or p q) = eval s p || eval s q
+eval s (Equivalence p q) = eval s p Prelude.== eval s q
 
 
 {-
@@ -339,6 +357,8 @@ vars (Var x) = [x]
 vars (Not p) = vars p
 vars (And p q) = vars p ++ vars q
 vars (Imply p q) = vars p ++ vars q
+vars (Or p q) = vars p ++ vars q
+vars (Equivalence p q) = vars p ++ vars q
 
 {-
 The key to generating substitutions is producing lists of logical values of a 
@@ -403,24 +423,28 @@ For this we first define a type of control stack for the abstract machine, which
 a list of operations to be performed by the machine after the current evaluation has
 been completed.
 -}
-data Expr = Val Int | Add Expr Expr
+data Expr = Val Int | Add Expr Expr | Mul Expr Expr
 
 type Cont = [Op]
 
-data Op = EVAL Expr | ADD Int
+data Op = EVAL Expr | ADD Int | MUL Int | EVALMUL Expr
 
 eval' :: Expr -> Cont -> Int
 eval' (Val n) c = exec c n 
 eval' (Add x y) c = eval' x (EVAL y: c)
+eval' (Mul x y) c = eval' x (EVALMUL y: c)
 
 value:: Expr -> Int
 value (Val n) = n
 value (Add x y) = value x + value y
+value (Mul x y) = value y * value y
 
 exec:: Cont -> Int -> Int
 exec [] n = n
 exec (EVAL y: c) n = eval' y (ADD n : c)
+exec (EVALMUL y: c) n = eval' y (MUL n : c)
 exec (ADD n : c) m = exec c (n+m)
+exec (MUL n : c) m = exec c (n * m)
 
 value' :: Expr -> Int
 value' e = eval' e []
@@ -430,3 +454,134 @@ The fact that the abstract machine uses two mutually recursive functions eval an
 reflects the fact that it has two modes of operation, depending upon whether it is being
 driven by the structure of the expression or the control stack.
 -}
+
+
+-- Exercises
+
+{-
+In a similar manner to the function add, define a recursive multiplication function 
+mult:: Nat -> Nat -> Nat for the recursive type of natural numbers:
+Hint: make use of add in your definition
+-}
+mult :: Natrl -> Natrl -> Natrl
+mult _ Zero = Zero
+mult Zero _ = Zero
+mult m n | nat2int n Prelude.== 1 = m
+         | nat2int m Prelude.== 1 = n
+         | otherwise = mult (add m m)  (int2nat (nat2int n - 1))
+
+
+{-
+Although not included in appendix B, the standard prelude defines
+    data Ordering = LT | EQ | GT
+together with a function
+    compare :: Ord a => a -> a -> Ordering
+that decides if one value in an ordered type is less than (LT), equal to (EQ), or 
+greater than (GT) another value. Using this function, redefine the function
+occurs::Ord a => a -> Tree a -> Bool for search trees. Why is this new definition
+more efficient than the original version?
+
+Copied from the solution provided. 
+Of course as explained, the comparison happens once which could lead to efficient
+search, since the comparison function returns Haskell equivalent of Enums.
+-}
+occurs'' :: Prelude.Ord a => a -> Tree a -> Bool
+occurs'' x (Leaf y) = x Prelude.== y
+occurs'' x (Node l y r) = case compare x y of 
+                            LT -> occurs x l
+                            EQ -> True
+                            GT -> occurs x r
+
+
+{-
+Consider the following type of binary trees:
+    data Tree a = Leaf a | Node (Tree a) (Tree a)
+
+Let us say that such a tree is balanced if the number of leaves in the left and
+right subtree of every node differs by at most one, with leaves themselves being
+trivially balanced. Define a function balanced:: Tree a -> Bool that decides if
+a binary tree is balanced or not.
+
+Hint: first define a function that returns the number of leaves in a tree.
+-}
+
+numLeaves :: Tree' a -> Int
+numLeaves (Leaf' _) = 1
+numLeaves (Node' l r) = numLeaves l + numLeaves r
+
+balanced :: Prelude.Ord a => Tree' a -> Bool
+balanced (Leaf' _) = True
+balanced (Node' l r) = abs (numLeaves l - numLeaves r) Prelude.<= 1
+                        && balanced l && balanced r
+
+
+{-
+Define a function balance :: [a] -> Tree a that converts a non-empty list into
+a balanced tree. 
+Hint: first define a function that splits a list into two halves whose length 
+differs by at most one.
+-}
+split :: [a] -> ([a], [a])
+split as = splitAt n as
+            where n = length as `div` 2
+
+balance ::[a] -> Tree' a 
+balance [a] = Leaf' a
+balance as = Node' (balance ls)  (balance rs)
+                where (ls, rs) = split as
+
+{-
+Given the type declaration 
+data Expr = Val Int | Add Expr Expr
+
+define a higher-order function
+    folde:: (Int -> a) -> (a->a->a) -> Expr -> a
+such that folde f g replaces each Val constructor in an expression by the
+function f, and each Add constructor by the function g.
+-}
+folde::(Int -> a) -> (a->a->a) -> Expr -> a
+folde f _ (Val a) = f a
+folde f g (Add e1 e2) = g (folde f g e1) (folde f g e2)
+
+
+{-
+Using folde, define a function eval::Expr -> Int that evaluates an expression
+to an integer value, and a function size::Expr -> Int that calculates the
+number of values in an expression
+-}
+eval'' :: Expr -> Int
+-- eval'' = folde id (\v1 -> \v2 -> v1 + v2)
+eval'' = folde id (+)
+
+size'' :: Expr -> Int
+size'' = folde (const 1) (+)
+
+
+{-
+Complete the following instance declarations:
+-}
+instance Main.Eq a => Main.Eq (Main.Maybe a) where
+    (==)::Main.Maybe a -> Main.Maybe a -> Bool
+    (Main.Just a1) == (Main.Just a2) = a1 Main.== a2
+    _ == _ = False
+
+
+instance Main.Eq a => Main.Eq [a] where
+    (==)::[a] -> [a] -> Bool
+    [] == [] = True
+    [] == _ = False
+    _ == [] = False
+    (x:xs) == (y:ys) = (x Main.== y) && (xs Main.== ys)
+
+
+{-
+Extend the tautology checker to support the use of logical disjunction (V) and 
+equivalence (<=>) in propositions
+
+-- Modified the definitions of tautology related functions above.
+-}
+
+{-
+Extend the abstract machine to support the use of multiplication.
+-}
+-- Modified the definitions of abstract machine related functions above.
