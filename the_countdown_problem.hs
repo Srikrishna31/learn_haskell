@@ -109,7 +109,8 @@ possible ways of selecting zero or more elements in any order, can then be defin
 simply by considering all permutations of all subsequences:
 -}
 choices :: [a] -> [[a]]
-choices = concat . map perms . subs
+-- choices = concat . map perms . subs
+choices xs = [zs | ys <- subs xs, zs <- perms ys]
 
 
 {-
@@ -185,7 +186,7 @@ that subtraction and division are not always valid operations for positive natur
 
 Based on this observation, the next approach is to combine the generation of 
 expressions with their evaluation, such that both tasks are performed simultaneously.
-In this way, expressions that faile to evaluate are rejected at an earlier stage,
+In this way, expressions that fail to evaluate are rejected at an earlier stage,
 and, more importantly, are not used to generate further expressions that will fail
 to evaluate.
 -}
@@ -236,4 +237,67 @@ the number of generated expressions:
     x * 1 = x
     1 * y = y
     x / 1 = x
+-}
+
+-- Exercises
+
+{-
+Redefine the combinatorial function choices using a list comprehension rather 
+than using composition, concat and map.
+-}
+-- Modified the function in place (although copied from the original solution)
+
+
+{-
+Define a recursive function isChoice :: Eq a => [a] -> [a] -> Bool that decides
+if one list is chosen from another, without using the combinatorial functions
+perms and subs. Hint: start by defining a function that removes the first occurrence
+of a value from a list.
+-}
+removeFirst :: Eq a => a -> [a] -> [a] 
+removeFirst _ [] = []
+removeFirst a (x:xs) | x == a = xs
+                     | otherwise = x : removeFirst a xs
+
+
+isChoice :: Eq a => [a] -> [a] -> Bool
+isChoice (x:xs) ys = isChoice xs (removeFirst x ys)
+isChoice _ _ = True
+
+
+{-
+What effect would generalising the function split to also return pairs containing
+the empty list have on the behavior of solutions?
+-}
+-- The solutions can be empty lists.
+
+
+{-
+Using the functions choices, exprs and eval, verify that there are 33,665,406
+possible expressions over the numbers 1,3,7,10,25,50 and that only 4,672,540 of
+these expressions evaluate successfully.
+-}
+choicesAndSolutions :: [Int] -> (Int, Int)
+choicesAndSolutions ns = (length es, length ess) 
+                        where 
+                            cs = choices ns
+                            es = [e | c <- cs, e <- exprs c]
+                            ess = [i | e <- es, i <- eval e]
+
+{-
+Similarly, verify that the number of expressions that evaluate successfully 
+increase to 10,839,369 if the numeric domain is generalized to arbitrary integers.
+Hint: modify the definition of valid.
+-}
+
+
+{-
+Modify the final program to:
+
+a. allow the use of exponentiation in expressions;
+
+b. produce the nearest solutions if no exact solution is possible;
+
+c. order the solutions using a suitable measure of simplicity.
+
 -}
