@@ -36,6 +36,9 @@ sum' list =
     [] -> 0
     x : xs -> x + sum' xs
 
+sum'' [] = 0
+sum'' (x : xs) = x + sum'' xs
+
 divImod :: Int -> Int -> (Int, Int)
 divImod n m
   | n < m = (0, n)
@@ -139,3 +142,44 @@ myLast'' :: [a] -> a
 myLast'' = head . reverse
 
 -- . is a composition of functions in Haskell
+
+-- Write a function myButLast that, given a list of elements of type a, returns the penultimate element of the list.
+myButLast :: [a] -> a
+myButLast [x, _] = x
+myButLast (_ : xs) = myButLast xs
+
+myButLast' :: [a] -> a
+myButLast' = head . tail . reverse
+
+-- Define a function dupli that duplicates the elements of a list
+-- eg: dupli [1, 2, 3 ]
+-- [1,1,2,2,3,3]
+dupli :: [a] -> [a]
+dupli [] = []
+dupli (x : xs) = [x, x] ++ dupli xs
+
+-- Define a function average :: [Inr] -> Float that, given a non-empty list of integers, returns its average.
+average :: [Int] -> Float
+average list = s / n
+  where
+    sumCount :: [Int] -> (Int, Int) -> (Int, Int)
+    sumCount [] (s, n) = (s, n)
+    sumCount (x : xs) (s, n) = sumCount xs (s + x, n + 1)
+
+    (s1, n1) = sumCount list (0, 0)
+
+    (s, n) = (fromIntegral s1 :: Float, fromIntegral n1 :: Float)
+
+-- Define a function insertIn :: a -> [a] -> Int -> [a] that inserts an element in a given position into a list
+insertIn :: a -> [a] -> Int -> [a]
+insertIn a [] _ = [a]
+insertIn a list n = insertInternal [] a list n
+  where
+    insertInternal :: [a] -> a -> [a] -> Int -> [a]
+    insertInternal prev a rem n
+      | n > 1 = insertInternal (head rem : prev) a (tail rem) (n - 1)
+      | otherwise = reverse prev ++ [a] ++ rem
+
+insertIn' :: a -> [a] -> Int -> [a]
+insertIn' x xs 1 = x : xs
+insertIn' x (y : ys) n = y : insertIn x ys (n - 1)
