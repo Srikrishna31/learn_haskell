@@ -104,3 +104,36 @@ countIn' l x = Prelude.map count l
   where
     count :: [Int] -> Int
     count = length Prelude.. filter (== x)
+
+-- Implement a function firstWord :: String -> String that, given a string with blanks and alphabetic characters, returns the first word of the string.
+firstWord :: String -> String
+firstWord = takeWhile (/= ' ') Prelude.. dropWhile (== ' ')
+
+-- firstWord = takeWhile (' '/=) Prelude.. dropWhile (' ' == )
+
+-- Define a function countIf :: (Int -> Bool) -> [Int] -> Int, that given a predicate on integers and a list of integers, returns the number of elements in the list
+-- that satisfy the predicate
+countIf :: (Int -> Bool) -> [Int] -> Int
+countIf p l = length $ filter p l
+
+-- countIf = length Prelude.. filter
+
+-- Define a function combined ::[Int] -> [Int -> Int] -> [[Int]] that, given a list of integers and a list of functions from integers to integers,
+-- returns the list consisting of applying each of the functions in the second list to the elements in the first list.
+combined :: [Int] -> [Int -> Int] -> [[Int]]
+-- combined ls fs = foldl (\acc f -> acc ++ Prelude.map f ls) [] fs
+combined l fs = [Prelude.map f l | f <- fs] -- Need to study this a bit better.
+
+-- Define a function consecutive :: [Int] -> [Int -> Int] -> [[Int]] that, given a list of integers and a list of functions from integers to integers, returns
+-- the list of lists where each list if the result of applying, one after the other, the function in the second list to each element in the first list.
+-- consecutive [1,2,3] [(+1), (*2), (^2)]   --> [[2,2,1], [3,4,4], [4,6,9]]
+consecutive :: [Int] -> [Int -> Int] -> [[Int]]
+consecutive ls fs = [foldr (\f acc -> f x : acc) [] fs | x <- ls]
+
+consecutive' :: [Int] -> [Int -> Int] -> [[Int]]
+consecutive' l fs = [[f x | f <- fs] | x <- l]
+
+-- Define a function filterFoldl :: (Int -> Bool) -> (Int -> Int -> Int) -> Int -> [Int] -> Int, that returns a fold of all the elements that satisfy the given predicate
+--  filterFoldl even (*) 1 [4,7,2,4,9,3]           ->     32
+filterFoldl :: (Int -> Bool) -> (Int -> Int -> Int) -> Int -> [Int] -> Int
+filterFoldl p o z ls = foldl o z $ filter p ls
