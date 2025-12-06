@@ -62,9 +62,9 @@ citySol line = case city of
     get_city :: Int -> String
     get_city km
       | km < 18 = "Napa"
-      | 18 < km && km < 25 = "Davenport"
-      | 25 < km && km < 30 = "Naperville"
-      | 30 < km && km < 45 = "Phoenix"
+      | km < 25 = "Davenport"
+      | km < 30 = "Naperville"
+      | km < 45 = "Phoenix"
       | otherwise = "Carbondale"
 
     get_name_km :: String -> (String, Either String Int)
