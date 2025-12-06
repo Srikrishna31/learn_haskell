@@ -16,7 +16,24 @@ Define a Rational type to manipulate positive rational numbers with operations b
     3. Obtain the denominator of its simplified form
     Also, make Rational a member of class Eq and Show, making rationals display in the form x / y.
 -}
--- data  Rational = Numerator (Int, Int) deriving (Show, Eq)
+data Rational = Rational Integer Integer
+
+instance Show Main.Rational where
+  show (Rational x y) = show x ++ " / " ++ show y
+
+instance Eq Main.Rational where
+  Rational x1 y1 == Rational x2 y2 = x1 == x2 && y1 == y2
+
+rational :: Integer -> Integer -> Main.Rational
+rational x y = Rational (x `div` gcdx) (y `div` gcdx)
+  where
+    gcdx = gcd x y
+
+numerator :: Main.Rational -> Integer
+numerator (Rational x _) = x
+
+denominator :: Main.Rational -> Integer
+denominator (Rational _ y) = y
 
 -- instance Main.Rational Show where
 --   show Main.Rational (x, y) = show x ++ " / " ++ show y
