@@ -103,3 +103,34 @@ selectFirst' xs ys zs =
         pos x (y : ys) it
           | x == y = it
           | otherwise = pos x ys (it + 1)
+
+{-
+Consider a generic symbol table that converts texts (Strings) to values of type a
+defined by
+    type SymTab a = String -> Maybe a
+The symbol table returns a `Maybe a` and not `a` in order to indicate unsuccessful searches.
+
+The operations on the symbol table are:
+empty:: SymTab a
+get:: SymTab a -> String -> Mabye a
+set:: SymTab a -> String -> a -> SymTab a
+
+where empty creates an empty symbol table, get returns the value of a text to the symbol table,
+(with Just if present or Nothing if not), and set returns a new symbol table defining a new value,
+for a symbol (and overwriting the old value if the symbol was already in the table).
+
+Implement these three operations on the given type (which you can't change).
+-}
+type SymTab a = String -> Maybe a
+
+empty :: SymTab a
+empty = const Nothing
+
+-- empty = (\_ -> Nothing)
+
+get :: SymTab a -> String -> Maybe a
+-- get table key = table key
+get table = table
+
+set :: SymTab a -> String -> a -> SymTab a
+set table key value = \a -> if key == a then Just value else table a
