@@ -1,3 +1,6 @@
+import Data.List (elemIndex)
+import Data.Maybe (fromMaybe, isJust, isNothing)
+
 {-
 Define a function fsmap:: a -> [a -> a] -> a which, given an element x of type a and a list fs of functions of type a -> a,
 causes fsmap x fs to return the application (from left right) of all functions from fs to x
@@ -50,3 +53,38 @@ multEq' x y = myScanl (* (x * y)) 1
 
 multEq'' :: Int -> Int -> [Int]
 multEq'' x y = iterate (* (x * y)) 1
+
+{-
+Write a function selectFirst :: [Int] -> [Int] -> [Int] -> [Int] that, given three lists
+l1, l2, l3, returns the elements of l1 that appear in l2 in a position strictly smaller
+than in l3. If an element appears in l2 and not in l3, it is considered to appear in
+previous position.
+
+selectFist [] [] []  -> []
+selectFirst [8,4,5,6,12,1] [] [8,6,5,4,1]   -> []
+selectFirst [8,4,5,6,12,1] [4,5,6,2,8,12] []    -> [8,4,5,6,12]
+selectFirst [8,4,5,6,12,1] [4,5,6,2,8,12] [8,6,5,4,1]   -> [4,5,12]
+-}
+selectFirst :: [Int] -> [Int] -> [Int] -> [Int]
+selectFirst _ [] _ = []
+selectFirst (x : xs) ys zs =
+  if isNothing position_list2
+    then selectFirst xs ys zs
+    else
+      if isNothing position_list3
+        then x : selectFirst xs ys zs
+        else
+          if isJustTrue pos_res || isNothing pos_res
+            then x : selectFirst xs ys zs
+            else
+              selectFirst xs ys zs
+  where
+    position_list2 = elemIndex x ys
+    position_list3 = elemIndex x zs
+    pos_res = comparePos position_list2 position_list3
+
+    comparePos :: Maybe Int -> Maybe Int -> Maybe Bool
+    comparePos = liftA2 (<)
+
+    isJustTrue :: Maybe Bool -> Bool
+    isJustTrue mb = fromMaybe False mb
