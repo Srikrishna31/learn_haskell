@@ -66,18 +66,13 @@ selectFirst [8,4,5,6,12,1] [4,5,6,2,8,12] []    -> [8,4,5,6,12]
 selectFirst [8,4,5,6,12,1] [4,5,6,2,8,12] [8,6,5,4,1]   -> [4,5,12]
 -}
 selectFirst :: [Int] -> [Int] -> [Int] -> [Int]
+selectFirst [] _ _ = []
 selectFirst _ [] _ = []
-selectFirst (x : xs) ys zs =
-  if isNothing position_list2
-    then selectFirst xs ys zs
-    else
-      if isNothing position_list3
-        then x : selectFirst xs ys zs
-        else
-          if isJustTrue pos_res || isNothing pos_res
-            then x : selectFirst xs ys zs
-            else
-              selectFirst xs ys zs
+selectFirst (x : xs) ys zs
+  | isNothing position_list2 = selectFirst xs ys zs
+  | isNothing position_list3 = x : selectFirst xs ys zs
+  | isJustTrue pos_res || isNothing pos_res = x : selectFirst xs ys zs
+  | otherwise = selectFirst xs ys zs
   where
     position_list2 = elemIndex x ys
     position_list3 = elemIndex x zs
@@ -87,4 +82,24 @@ selectFirst (x : xs) ys zs =
     comparePos = liftA2 (<)
 
     isJustTrue :: Maybe Bool -> Bool
-    isJustTrue mb = fromMaybe False mb
+    isJustTrue = fromMaybe False
+
+selectFirst' :: [Int] -> [Int] -> [Int] -> [Int]
+selectFirst' xs ys zs =
+  [ x
+  | x <- xs,
+    belongs x ys
+      && ( not $
+             belongs x zs
+               || (position x ys < position x zs)
+         )
+  ]
+  where
+    belongs = elem
+    position :: Int -> [Int] -> Int
+    position x ys = pos x ys 0
+      where
+        pos :: Int -> [Int] -> Int -> Int
+        pos x (y : ys) it
+          | x == y = it
+          | otherwise = pos x ys (it + 1)
