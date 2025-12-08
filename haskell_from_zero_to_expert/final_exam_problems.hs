@@ -35,5 +35,18 @@ numerator (Rational x _) = x
 denominator :: Main.Rational -> Integer
 denominator (Rational _ y) = y
 
--- instance Main.Rational Show where
---   show Main.Rational (x, y) = show x ++ " / " ++ show y
+{-
+Write a function multEq :: Int -> Int -> [Int] that, given two nonzero positive numbers x and y,
+outputs the infinitely increasing ordered list containing the numbers formed by multiplying the
+same amount of x and y.
+-}
+multEq :: Int -> Int -> [Int]
+multEq x y = scanl (*) 1 $ repeat (x * y)
+
+multEq' :: Int -> Int -> [Int]
+multEq' x y = myScanl (* (x * y)) 1
+  where
+    myScanl f init = init : myScanl f (f init)
+
+multEq'' :: Int -> Int -> [Int]
+multEq'' x y = iterate (* (x * y)) 1

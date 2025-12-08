@@ -26,17 +26,22 @@
 --   name <- getLine
 --   putStrLn $ "Hello " ++ name ++ "!"
 
+import Control.Monad
+
 -- Write a text backwards
 main :: IO ()
 main = do
   putStrLn "Enter any text"
   x <- getLine
-  if last x /= '*'
-    then do
-      putStrLn $ reverse x
-      main
-    else
-      return ()
+  when (last x /= '*') $ do
+    putStrLn $ reverse x
+
+-- if last x /= '*'
+-- then do
+--     putStrLn $ reverse x
+--     main
+-- else
+--     return ()
 
 -- putStrLn x
 -- let y = reverse x
