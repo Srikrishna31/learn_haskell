@@ -197,3 +197,48 @@ canGo'' p q = q `elem` destinations
 
 canGo' :: Pos -> Pos -> Bool
 canGo' p q = q `elem` (moves p >>= moves >>= moves)
+
+{-
+In Haskell, the standard class `Foldable` is responsible for allowing the use of folds on structured
+data in order to obtain an aggregate. For examples, Lists are instances of Foldable, and the sum function
+is defined in the Foldable class.
+To instantiate Foldable we only need to define `foldr`, as all other operations have a default definition
+that uses it.
+
+`foldr` is a higher-order function used to reduce (or fold) a data structure into a single value by recursively
+applying a binary function to the elements of the structure, starting from the rightmost element.
+
+The goal of this exercise is to make the type of the binary trees an instance of the Foldable class.
+Consider this type for binary trees:
+        data Tree a = Empty | Node a (Tree a) (Tree a) deriving (Show)
+
+It is requested:
+    1. Make Tree an instance of `Foldable`. To do this, implement the foldr function by applying a function
+    to the elements of the tree while following a preorder traversal.
+    2. Define a function avg:: Tree Int -> Double to calculate the average of the elements of a non-mepty tree
+    of integers. Use the fromIntegral to convert from integer to real.
+    3. Define a function cat:: Tree String -> String to concatenate with spaces all the nodes of a text tree.
+
+Public Test Cases
+maximum $ Node 'a' (Node 'c' Empty Empty) (Node 'b' Empty Empty)          'c'
+avg $ Node 10 (Node 20 Empty Empty) (Node 30 Empty Empty)                 20.0
+cat $ Node "my" (Node "dog" Empty Empty)
+        (Node "likes" (Node "summer" Empty Empty) Empty)                  "my dog likes summer"
+
+-}
+data Tree a = Empty | Node a (Tree a) (Tree a) deriving (Show)
+
+instance Foldable Tree where
+  foldr :: (a -> b -> b) -> b -> Tree a -> b
+  foldr _ init Empty = init
+  foldr f init (Node v left right) = f v (foldr f (foldr f init right) left)
+
+-- foldr f init (Node v left right) = f v (foldr f (foldr f init left) right)
+
+avg :: Tree Int -> Double
+avg t = sum / fromIntegral n
+  where
+    (sum, n) = foldr (\x acc -> (fst acc + fromIntegral x, snd acc + 1)) (0.0, 0) t
+
+cat :: Tree String -> String
+cat = foldr (\x acc -> x ++ " " ++ acc) ""
