@@ -1,4 +1,4 @@
-import Data.List (elemIndex)
+import Data.List (elemIndex, sort)
 import Data.Maybe (fromMaybe, isJust, isNothing)
 
 {-
@@ -134,3 +134,66 @@ get table = table
 
 set :: SymTab a -> String -> a -> SymTab a
 set table key value = \a -> if key == a then Just value else table a
+
+{-
+Consider a knight on an mepty 8x8 chess board. Its position can be given with a
+tuple indicating its row and column:
+
+type Pos = (Int, Int) -- bottom left box is (1,1)
+
+Remember that a knight moves in "L":
+    1. Define a function in::Pos -> Bool that, given a position of a horse, returns
+    if it is inside the board.
+
+    2. Define a function moves :: Pos -> [Pos] that, given a position of the horse within
+    the board, returns the list of positions withing the board where it can be found after a
+    jump. The order of the list is not important: Test sets already sort it with luck. But you
+    must write import Data.List(sort) at the beginning of the program.
+
+    3. Define a function canGo3 :: Pos -> Pos -> Bool that, given a start position p within the
+    board and a final position q, tells whether a horse can go from p to q in (exactly) three jumps.
+
+    4. Now define canGo' :: Pos -> Pos -> Bool that does the same as canGo3 but taking advantage of
+    the fact that lists are Monad instances.
+
+Some test cases:
+
+isIn (4,5)          True
+isIn (0, 1)         False
+isIn (4, 9)         False
+
+moves (4,5)         [(2,4), (2,6), (3,3), (3,7), (5,3), (5,7), (6,4), (6,6)]
+moves (1,1)         [(2,3), (3,2)]
+
+canGo (1,1) (4,5)   True
+cANGo 9
+-}
+type Pos = (Int, Int) -- bottom left box is (1,1)
+
+isIn :: Pos -> Bool
+isIn (x, y) = x >= 1 && x <= 8 && y >= 1 && y <= 8
+
+moves :: Pos -> [Pos]
+moves (x, y) = sort [(x1, y1) | x1 <- [x + 2, x - 2, x + 1, x - 1], y1 <- [y - 2, y - 1, y + 1, y + 2], isIn (x1, y1) && abs (x1 - x) /= abs (y1 - y)]
+
+-- This is a wrong implementation. The function is stuck in an infinite loop.
+canGo :: Pos -> Pos -> Bool
+canGo p q = go p q 1
+  where
+    go :: Pos -> Pos -> Int -> Bool
+    go p q i
+      | q `elem` positions && (i < 3 || i > 3) = False
+      | q `elem` positions && i == 3 = True
+      | otherwise = checkPositions positions q i
+      where
+        positions = moves p
+        checkPositions :: [Pos] -> Pos -> Int -> Bool
+        checkPositions (p : ps) q i = go p q (i + 1) || checkPositions ps q i
+
+canGo'' :: Pos -> Pos -> Bool
+canGo'' p q = q `elem` destinations
+  where
+    destinations = concatMap moves $ concatMap moves $ moves p
+
+canGo' :: Pos -> Pos -> Bool
+canGo' p q = q `elem` (moves p >>= moves >>= moves)
