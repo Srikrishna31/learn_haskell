@@ -34,6 +34,8 @@ acyclicPaths source sink edges
 -- Write a function depthFisrt :: Graph -> Node -> [Node] that generates a depth-first order graph traversal sequence Use the following graph notation:
 {-
 The algorithm starts at a starting node and explores as far as possible along each branch before backtracking
+
+depthFirst ([1,2,3,4,5,6,7], [(1,2), (2,3), (1,4), (3,4), (2,5), (5,4), (6,7)]) 1
 -}
 type Node = Int
 
@@ -55,3 +57,17 @@ depthFirst (v, e) node
       where
         adjacent = [x | (x, y) <- e, y == top] ++ [x | (y, x) <- e, y == top]
         newv = [x | x <- v, x /= top]
+
+{-
+Write a predicate `connectedComponents :: Graph -> [[Node]]` that splits a graph into its
+connected components.`
+
+connectedComponents  ([1,2,3,4,5,6,7], [(1,2), (2,3), (1,4), (3,4), (5,2), (5,4), (6,7)])
+[[1,2,5,4,3],[6,7]]
+-}
+
+connectedComponents :: Graph -> [[Node]]
+connectedComponents ([], _) = []
+connectedComponents (v, e) = dfs_res : connectedComponents ([x | x <- v, x `notElem` dfs_res], e)
+  where
+    dfs_res = depthFirst (v, e) (head v)
