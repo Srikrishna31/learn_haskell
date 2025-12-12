@@ -1,3 +1,5 @@
+import Data.List ((\\))
+
 {-
     Haskell Graphs Notation
 
@@ -64,10 +66,21 @@ connected components.`
 
 connectedComponents  ([1,2,3,4,5,6,7], [(1,2), (2,3), (1,4), (3,4), (5,2), (5,4), (6,7)])
 [[1,2,5,4,3],[6,7]]
+connectedComponents ([1..8], [(1,2), (4,5), (6,7), (6,8), (7,8)])
+[[1,2],[3],[4,5],[6,7,8]]
 -}
 
 connectedComponents :: Graph -> [[Node]]
 connectedComponents ([], _) = []
-connectedComponents (v, e) = dfs_res : connectedComponents ([x | x <- v, x `notElem` dfs_res], e)
+connectedComponents (top : v, e) = dfs_res : connectedComponents ([x | x <- top : v, x `notElem` dfs_res], e)
   where
-    dfs_res = depthFirst (v, e) (head v)
+    dfs_res = depthFirst (top : v, e) top
+
+connectedComponents' :: Graph -> [[Node]]
+connectedComponents' ([], _) = []
+connectedComponents' (top : v, e)
+  | null remaining = [connected]
+  | otherwise = connected : connectedComponents' (remaining, e)
+  where
+    connected = depthFirst (top : v, e) top
+    remaining = (top : v) \\ connected
