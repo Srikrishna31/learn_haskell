@@ -51,6 +51,7 @@ result value from the expression as a whole.
 3. If the result value produced by a generator vi <- ai is not required, the generator can be abbreviated simply by ai, which has the same meaning as writing _ <- ai
 -}
 
+import Data.Char
 import System.IO (hSetEcho, stdin)
 
 act :: IO (Char, Char)
@@ -141,3 +142,105 @@ play word = do
 
 match :: String -> String -> String
 match xs ys = [if x `elem` ys then x else '-' | x <- xs]
+
+{-
+Nim
+    1: * * * * *
+    2: * * * *
+    3: * * *
+    4: * *
+    5: *
+
+    The players then take it in turn to remove one or more stars from the end of a single row. The winner is the player who
+    makes the board empty, that is, who removes the final star or stars from the board.
+-}
+
+-- For simplicity, we represent the player number (1 or 2) as an Integer, and we use the following function to get the next player:
+next :: Int -> Int
+next 1 = 2
+next 2 = 1
+
+{-
+In turn, we represent the board as a list comprising the number of stars that remain on each row, with the initial board given
+by the list [5,4,3,2,1] and the game being finished when all rows have no stars left:
+-}
+type Board = [Int]
+
+initial :: Board
+initial = [5, 4, 3, 2, 1]
+
+finished :: Board -> Bool
+finished = all (== 0)
+
+{-
+A move in the game is specified by a row number and the number of stars to be removed, and is valid if the row contains at least
+this many stars.
+-}
+valid :: Board -> Int -> Int -> Bool
+valid b r n = b !! (r - 1) >= n
+
+move :: Board -> Int -> Int -> Board
+move board row num = [update r n | (r, n) <- zip [1 ..] board]
+  where
+    update r n = if r == row then n - num else n
+
+putRow :: Int -> Int -> IO ()
+putRow row num =
+  do
+    Prelude.putStr (show row)
+    Prelude.putStr ": "
+    Prelude.putStrLn (concat (replicate num "* "))
+
+putBoard :: Board -> IO ()
+putBoard [a, b, c, d, e] =
+  do
+    putRow 1 a
+    putRow 2 b
+    putRow 3 c
+    putRow 4 d
+    putRow 5 e
+
+getDigit :: String -> IO Int
+getDigit prompt =
+  do
+    Prelude.putStr prompt
+    x <- getChar
+    newline
+    if isDigit x
+      then
+        return (digitToInt x)
+      else do
+        Prelude.putStrLn "ERROR: Invalid digit"
+        getDigit prompt
+
+newline :: IO ()
+newline = Prelude.putChar '\n'
+
+-- Game of Nim
+playNim :: Board -> Int -> IO ()
+playNim board player =
+  do
+    newline
+    putBoard board
+    if finished board
+      then do
+        newline
+        Prelude.putStr "Player"
+        Prelude.putStr (show (next player))
+        Prelude.putStrLn " wins!!"
+      else do
+        newline
+        Prelude.putStr "Player"
+        Prelude.putStrLn (show player)
+        row <- getDigit "Enter a row number: "
+        num <- getDigit "Stars to remove: "
+        if valid board row num
+          then
+            playNim (move board row num) (next player)
+          else do
+            newline
+            Prelude.putStrLn "ERROR: Invalid move"
+            playNim board player
+
+nim :: IO ()
+nim = playNim initial 1
