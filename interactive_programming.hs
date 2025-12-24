@@ -244,3 +244,120 @@ playNim board player =
 
 nim :: IO ()
 nim = playNim initial 1
+
+{-
+Game of Life:
+    The game models a simple evolutionary system based on cells, and is played on a two-dimensional board. Each square
+    on the board is either empty, or contains a single living cell. Each internal square on the board has eight internal neighbors.
+
+    For uniformity, each external square on the board is also viewed as having eight neighbors, by assuming that the board wraps
+    around from top-to-bottom and from left-to-right. That is, we can think of the board as really being a torus, the surface of a
+    three-dimensional doughnut shaped object.
+
+    Given an initial configuration of the board, the next generation of the board is given by simultaneously applying the following
+    rules to all squares:
+        * a living cell survives if it has precisely two or three neighbouring squares that contain living cells, and
+        * an empty square gives birth to a living cell if it has precisely three neighbours that contain living cells, and remains empty otherwise.
+
+    Despite it's simplicity, the game of life is in fact computationally complete, in the sense that any computational process can be
+    simulated within it by means of a suitable encoding.
+-}
+-- Screen Utilities
+cls :: IO ()
+cls = Prelude.putStr "\ESC[2J"
+
+type Pos = (Int, Int)
+
+-- Function to display a string at a given position on the screen.
+writeat :: Pos -> String -> IO ()
+writeat p xs =
+  do
+    goto p
+    Prelude.putStr xs
+
+goto :: Pos -> IO ()
+goto (x, y) = Prelude.putStr ("\ESC[" ++ show y ++ ";" ++ show x ++ "H")
+
+width :: Int
+width = 10
+
+height :: Int
+height = 10
+
+type LifeBoard = [Pos]
+
+glider :: LifeBoard
+glider = [(4, 2), (2, 3), (4, 3), (3, 4), (4, 4)]
+
+-- The library function sequence_ :: [IO a] -> IO () performs a list of IO actions in sequence, discarding their results.
+showCells :: LifeBoard -> IO ()
+showCells b = sequence_ [writeat p "O" | p <- b]
+
+isAlive :: LifeBoard -> Pos -> Bool
+isAlive b p = p `elem` b
+
+isEmpty :: LifeBoard -> Pos -> Bool
+isEmpty b p = not (isAlive b p)
+
+neighbs :: Pos -> [Pos]
+neighbs (x, y) =
+  map
+    wrap
+    [ (x - 1, y - 1),
+      (x, y - 1),
+      (x + 1, y - 1),
+      (x - 1, y),
+      (x + 1, y),
+      (x - 1, y + 1),
+      (x, y + 1),
+      (x + 1, y + 1)
+    ]
+
+wrap :: Pos -> Pos
+wrap (x, y) =
+  ( ((x - 1) `mod` width) + 1,
+    ((y - 1) `mod` height) + 1
+  )
+
+-- A function that calculates the number of living positions in a board that have precisely two or three neighbours, and
+-- hence survive to the next generation of the game:
+liveneighbs :: LifeBoard -> Pos -> Int
+liveneighbs b = length . filter (isAlive b) . neighbs
+
+survivors :: LifeBoard -> [Pos]
+survivors b = [p | p <- b, (liveneighbs b p) `elem` [2, 3]]
+
+births :: LifeBoard -> [Pos]
+births b =
+  [ (x, y)
+  | x <- [1 .. width],
+    y <- [1 .. height],
+    isEmpty b (x, y),
+    liveneighbs b (x, y) == 3
+  ]
+
+birthsEfficient :: LifeBoard -> [Pos]
+birthsEfficient b =
+  [ p
+  | p <- rmdups (concatMap neighbs b),
+    isEmpty b p,
+    liveneighbs b p == 3
+  ]
+
+rmdups :: (Eq a) => [a] -> [a]
+rmdups [] = []
+rmdups (x : xs) = x : rmdups (filter (/= x) xs)
+
+nextgen :: LifeBoard -> LifeBoard
+nextgen b = survivors b ++ births b
+
+life :: LifeBoard -> IO ()
+life b = do
+  cls
+  showCells b
+  wait 50000
+  life (nextgen b)
+
+-- A simple function which returns a list of empty actions based on the input number provided.
+wait :: Int -> IO ()
+wait n = sequence_ [return () | _ <- [1 .. n]]
