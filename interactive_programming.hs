@@ -51,8 +51,9 @@ result value from the expression as a whole.
 3. If the result value produced by a generator vi <- ai is not required, the generator can be abbreviated simply by ai, which has the same meaning as writing _ <- ai
 -}
 
+import Control.Monad (replicateM)
 import Data.Char
-import System.IO (hSetEcho, stdin)
+import System.IO (hFlush, hSetEcho, stdin, stdout)
 
 act :: IO (Char, Char)
 -- An example function which skips the second character, and returns the first and third as a pair:
@@ -221,7 +222,9 @@ playNim :: Board -> Int -> IO ()
 playNim board player =
   do
     newline
-    putBoard board
+    -- putBoard board
+    -- betterPutBoard board
+    anotherPutBoard board
     if finished board
       then do
         newline
@@ -361,3 +364,102 @@ life b = do
 -- A simple function which returns a list of empty actions based on the input number provided.
 wait :: Int -> IO ()
 wait n = sequence_ [return () | _ <- [1 .. n]]
+
+-- Exercises
+
+{-
+Redefine putStr :: String -> IO () using a list comprehension and the library function sequence_ :: [IO a] -> IO ()
+-}
+myPutStr :: String -> IO ()
+myPutStr s = sequence_ [putChar c | c <- s]
+
+{-
+Using recursion, define a version of putBoard :: Board -> IO () that displays nim boards of any size, rather than being
+specific to boards with just five rows of stars.
+Hint: First define an auxiliary function that takes the current row number as an additional argument.
+-}
+anotherPutBoard :: Board -> IO ()
+anotherPutBoard b = showBoard 1 b
+  where
+    showBoard :: Int -> Board -> IO ()
+    showBoard _ [] = return ()
+    showBoard i (p : ps) = do
+      putRow i p
+      showBoard (i + 1) ps
+
+{-
+In a similar manner to the first exercise, redefine the generalized version of putBoard using a list comprehension and sequence_
+-}
+betterPutBoard :: Board -> IO ()
+betterPutBoard b = sequence_ [putRow i n | (i, n) <- zip [1 ..] b]
+
+{-
+Define an action adder :: IO () that reads a given number of integers from the keyboard, one per line, and displays their sum. For e.g.:
+
+> adder
+How many numbers ? 5
+1
+3
+5
+7
+9
+The total is 25
+
+Hint: start by defining an auxiliary function that takes the current total and how many numbers remain to be read as arguments.
+You will also likely need to use the library functions read and show
+-}
+adder :: IO ()
+adder =
+  do
+    Prelude.putStr "How many numbers?"
+    hFlush stdout -- Send output immediately to the screen.
+    n <- readLn
+    -- list_numbers <- replicateM n (readLn :: IO Int)
+    s <- repeat n 0
+    Prelude.putStrLn ("The total is " ++ show s)
+  where
+    repeat :: Int -> Int -> IO Int
+    repeat n s =
+      if n > 0
+        then do
+          v <- readLn
+          repeat (n - 1) (s + v)
+        else
+          return s
+
+{-
+Redefine adder using the function sequence :: [IO a] -> IO [a] that performs a list of actions and returns a list of resulting values.
+-}
+anotherAdder :: IO ()
+anotherAdder =
+  do
+    Prelude.putStr "How many numbers?"
+    hFlush stdout
+    n <- readLn
+    let list_numbers = sequence [(readLn :: IO Int) | _ <- [1 .. n]]
+    nums <- list_numbers
+    Prelude.putStrLn ("The total is " ++ show (sum nums))
+
+{-
+Using getCh, define an action readLine :: IO String that behaves in the same way as getLine, except that it also permits the delete
+key to be used to remove characters.
+Hint: the delete character is `\DEL`, and the control characters for moving the cursor back one space is `\b`.
+-}
+readLine :: IO String
+readLine = go []
+  where
+    removeHead :: [Char] -> [Char]
+    removeHead [] = []
+    removeHead (_ : xs) = xs
+
+    go :: [Char] -> IO String
+    go acc =
+      do
+        c <- getCh
+        if c == '\DEL'
+          then go (removeHead acc)
+          else
+            if c == '\n'
+              then return (reverse acc)
+              else
+                go (c : acc)
