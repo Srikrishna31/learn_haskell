@@ -1,8 +1,5 @@
 import Data.Char
 import Data.List
-import Data.Tree (drawForest)
-import GHC.Exts (currentCallStack)
-import GHC.Exts.Heap.Closures (GenStackFrame (result))
 import System.IO
 
 size :: Int
@@ -268,7 +265,8 @@ bestMove g p = head [g' | Node (g', p') _ <- ts, p' == best]
 
 {-
 Human vs Computer
-
+The function hSetBuffering is provided in the library System.IO, and is used above to turn output buffering off, which is by default
+turned on in GHC.
 -}
 main :: IO ()
 main = do
@@ -282,6 +280,11 @@ play g p = do
   putGrid g
   play' g p
 
+{-
+The operator $! used below for p==X branch, forces evaluation of the best move for the computer player prior to the function
+play being invoked again, without which there may be a delay between clearing the screen and displaying the grid in play while
+the best move was then calculated under lazy evaluation.
+-}
 play' :: Grid -> Player -> IO ()
 play' g p
   | wins O g = putStrLn "Player O wins!\n"
