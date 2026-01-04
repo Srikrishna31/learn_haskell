@@ -570,3 +570,131 @@ join mmx = do
 
    The third equation concerns the link between >>= and itself, and expresses that >>= is associative.
 -}
+
+{-
+        Exercises
+-}
+
+{-
+Define an instance of the Functor class for the following type of binary trees that have data in their nodes.
+-}
+data ETree a = ELeaf | ENode (ETree a) a (ETree a) deriving (Show)
+
+instance Functor ETree where
+  -- fmap :: (a -> b) -> Tree a -> Tree b
+  fmap _ ELeaf = ELeaf
+  fmap f (ENode l a r) = ENode (fmap f l) (f a) (fmap f r)
+
+{-
+    Complete the following instance declaration to make the partially-applied function type (a -> ) into a functor
+
+    Hint: first write down the type of fmap, and then think if you already know a library function that has this type:
+-}
+instance Functor ((->) a) where
+  -- fmap :: (b -> c) -> (a -> b) -> (a -> c)
+  fmap = (.)
+
+{-
+    Define an instance of the Applicative class for the type (a ->). If you are familiare with combinatory logic, you
+    might recognize pure and <*> for this type as being the well-known K and S combinators.
+-}
+instance Applicative ((->) a) where
+  -- pure :: b -> ( a-> b)
+  pure = const
+
+  -- <*> :: (a -> b -> c) -> (a->b) -> (a -> c)
+  g <*> h = \x -> g x (h x)
+
+{-
+There may be more than one way to make a parameterized type into an applicative functor. For example the
+library Control.Applicative provides an alternative `zippy` instance for lists, in which the function pure makes an
+infinite list of copies of its argument, and the operator <*> applies each argument function to the corresponding
+argument value at the same position.
+Complete the following declarations that implement this idea:
+
+The ZipList wrapper around the list type is required because each type can only have at most one instance
+declaration for a given class.
+-}
+newtype ZipList a = Z [a] deriving (Show)
+
+instance Functor ZipList where
+  -- fmap :: (a -> b) -> ZipList a -> ZipList b
+  fmap g (Z xs) = Z (map g xs)
+
+instance Applicative ZipList where
+  -- pure :: a -> ZipList a
+  pure a = Z (repeat x)
+
+  -- <*> :: ZipList ( a -> b) -> ZipList a -> ZipList b
+  (Z fs) <*> (Z xs) = Z [g x | (g, x) <- zip gs xs]
+
+{-
+Work out the types for the variables in the four applicative laws.
+-}
+
+{-
+Define an instance of the Monad class for the type (a ->).
+-}
+
+{-
+Given the following type of expressions
+    data Expr a = Var a | Val Int | Add (Expr a) (Expr a) deriving (Show)
+
+that contain variables of some type a, show how to make this type into instances of Functor, Applicative and Monad
+classes. With the aid of an example, explain what the >>= operator for this type does.
+-}
+data EExpr a = EVar a | EVal Int | EAdd (EExpr a) (EExpr a) deriving (Show)
+
+instance Functor EExpr where
+  -- fmap :: (a-> b) -> EExpr a -> EExpr b
+  fmap f (EVar a) = EVar (f a)
+  fmap _ (EVal i) = EVal i
+  fmap f (EAdd (EExpr l) (EExpr r)) = EAdd (EExpr (fmap g l)) (EExpr (fmap g r))
+
+instance Applicative EExpr where
+  -- pure :: a -> Expr a
+  pure (a :: Int) = EVal a
+  pure a = EVar a
+
+  -- <*> EExpr (a -> b) -> EExpr a -> EExpr b
+  (EExpr f) <*> (EExpr a) = EExpr (fmap f a)
+
+instance Monad EExpr where
+  -- return :: a -> EExpr a
+  return = pure
+
+  -- (>>=) :: EExpr a -> (a -> EExpr b) -> EExpr b
+  EExpr a >>= f = f a
+
+{-
+Rather than making a parameterized type into instances of the Functor, Applicative and Monad classes in this order,
+in practice, it is sometimes simpler to define the functor and applicative instances in terms of the monad instance,
+relying on the fact that the order in which declarations are made is not important in Haskell. Complete the missing
+parts in the following declarations for the ST type using the do notation.
+-}
+newtype SST a = SS (State -> (a, State)) -- just another copy for ST type for the sake of this exercise.
+
+-- The only confusion is, where to get the initial state from in the function declarations.
+instance Functor SST where
+  -- fmap :: (a -> b) -> SST a -> SST b
+  fmap g sst = do
+    x <- sst
+    return g x
+
+instance Applicative SST where
+  -- pure :: a -> SST a
+  pure x = SS (\s -> (x, s))
+
+  -- <*> :: SST (a -> b) -> SST a -> SST b
+  stf <*> stx = do
+    f <- stf
+    x <- stx
+    return (f x)
+
+instance Monad SST where
+  -- (>>=) :: SST a -> (a -> SST b) -> SST b
+  st >>= f =
+    S
+      ( \s ->
+          let (x, s') = app st s in app (f x) s'
+      )
