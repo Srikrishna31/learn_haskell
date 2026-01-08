@@ -507,11 +507,11 @@ calc xs = do
     then
       process c xs
     else do
-      beep
+      beep ([c] ++ " is unsupported option. Please choose from these: \n" ++ buttons)
       calc xs
 
-beep :: IO ()
-beep = putStr "\BEL"
+beep :: String -> IO ()
+beep s = putStr (s ++ "\n \BEL")
 
 process :: Char -> String -> IO ()
 process c xs
@@ -532,7 +532,7 @@ eval' :: String -> IO ()
 eval' xs = case parse expr xs of
   [(n, [])] -> calc (show n)
   _ -> do
-    beep
+    beep ""
     calc xs
 
 clear :: IO ()
@@ -546,3 +546,189 @@ run = do
   cls
   showbox
   clear
+
+{-
+    Define a parser comment :: Parser () for ordinary Haskell comments that begin with the symbol -- and
+    extend to the end of the current line, which is represented by the control character '\n'
+-}
+comment :: Parser ()
+comment = do
+  token (string "--")
+  many alphanum
+  char '\n'
+  return ()
+
+comment' :: Parser ()
+comment' = do
+  string "--"
+  many (sat (/= '\n'))
+  return ()
+
+{-
+Explain why the final simplification of the grammar for arithmetic expressions has a dramatic effect on the efficiency of
+the resulting parser. Hint: begin by considering how an expression comprising a single number would be parsed if this
+simplification step had not been made.
+
+Answer from Book: Without left-factorizing, the resulting parser would backtrack excessively and take exponential time
+in the size of the expression. For example, a number would be parsed four times before being recognized as an expression.
+-}
+
+{-
+Define a suitable type Expr for arithmetic expressions and modify the parser for expressions to have type expr:: Parser Expr
+-}
+data Expr = Add Expr Expr | Mul Expr Expr | Paren Expr | Number Int
+
+instance Show Expr where
+  show (Add l r) = (show l) ++ " + " ++ (show r)
+  show (Mul l r) = (show l) ++ " * " ++ (show r)
+  show (Paren e) = "( " ++ show e ++ " )"
+  show (Number n) = show n
+
+expr' :: Parser Expr
+expr' =
+  do
+    t <- term'
+    do
+      symbol "+"
+      e <- expr'
+      return (Add t e)
+      <|> return t
+
+term' :: Parser Expr
+term' =
+  do
+    f <- factor'
+    do
+      symbol "*"
+      t <- term'
+      return (Mul f t)
+      <|> return f
+
+factor' :: Parser Expr
+factor' =
+  do
+    symbol "("
+    e <- expr'
+    symbol ")"
+    return (Paren e)
+    <|> natural'
+
+natural' :: Parser Expr
+natural' = do
+  n <- natural
+  return (Number n)
+
+{-
+Extend the parser expr:: Parser Int to support subtraction and division, and to use integer values rather than natural
+numbers, based upon the following revisions to the grammar:
+
+    -> expr ::= term (+expr | - expr | empty)
+
+    -> term ::= factor (* term | / term | empty)
+
+    -> factor ::= (expr) | int
+
+    -> int ::= ... | -1 | 0 | 1 | ...
+-}
+expr'' :: Parser Int
+expr'' =
+  do
+    t <- term''
+    do
+      s <- symbol "+" <|> symbol "-"
+      e <- expr''
+      if s == "-" then return (t - e) else return (t + e)
+      <|> return t
+
+term'' :: Parser Int
+term'' =
+  do
+    f <- factor''
+    do
+      s <- symbol "*" <|> symbol "/"
+      t <- term''
+      if s == "*" then return (f * t) else return (f `div` t)
+      <|> return f
+
+factor'' :: Parser Int
+factor'' =
+  do
+    symbol "("
+    e <- expr''
+    symbol ")"
+    return e
+    <|> int
+
+{-
+    Further extend the grammar and parser for arithmetic expressions to support exponentiation ^, which is
+    assumed to associate to the right and have higher priority than multiplication and division, but lower priority
+    than parentheses and numbers. For example 2^3*4 means (2^3)*4.
+    Hint: the new level of priority requires a new rule in the grammar.
+
+        -> expr ::= exp (^ expr | empty)
+
+        -> exp ::= term (+ expr | - expr | empty)
+
+        -> term ::= factor (* term | / term | empty)
+
+        -> factor ::= (expr) | int
+
+        -> int ::= ... | -1 | 0 | 1 | ...
+-}
+expr''' :: Parser Int
+expr''' =
+  do
+    t <- Main.exp
+    do
+      symbol "^"
+      e <- expr'''
+      return (t ^ e)
+      <|> return t
+
+exp :: Parser Int
+exp =
+  do
+    t <- term'''
+    do
+      s <- symbol "+" <|> symbol "-"
+      e <- expr'''
+      if s == "-" then return (t - e) else return (t + e)
+      <|> return t
+
+term''' :: Parser Int
+term''' =
+  do
+    f <- factor'''
+    do
+      s <- symbol "*" <|> symbol "/"
+      t <- term'''
+      if s == "*" then return (f * t) else return (f `div` t)
+      <|> return f
+
+factor''' :: Parser Int
+factor''' =
+  do
+    symbol "("
+    e <- expr'''
+    symbol ")"
+    return e
+    <|> int
+
+{-
+Consider expressions built up from natural numbers using a subtraction opoeator that is assumed to
+associate to the left.
+    a. Translate this description directly into a grammar
+
+    b. Implement this grammar as a parser expr :: Parser Int
+
+    c. What is the problem with this parser?
+
+    d. Show how it can be fixed. Hint: rewrite the parser using the repetition primitive many and the
+    library function foldl.
+-}
+
+{-
+    Modify the calculator program to indicate the approximate position of an error rather than just
+    sounding a beep, by using the fact that the parser returns the unconsumed part of the input
+    string.
+-}
