@@ -511,7 +511,10 @@ calc xs = do
       calc xs
 
 beep :: String -> IO ()
-beep s = putStr (s ++ "\n \BEL")
+beep s = do
+  writeat (20, 1) (s ++ "\n \BEL")
+  hFlush stdout
+  return ()
 
 process :: Char -> String -> IO ()
 process c xs
@@ -531,8 +534,8 @@ delete xs = calc (init xs)
 eval' :: String -> IO ()
 eval' xs = case parse expr xs of
   [(n, [])] -> calc (show n)
-  _ -> do
-    beep ""
+  [(_, rs)] -> do
+    beep ("Error in expression before this point: " ++ rs)
     calc xs
 
 clear :: IO ()
