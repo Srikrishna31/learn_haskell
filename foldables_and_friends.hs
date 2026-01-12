@@ -276,7 +276,7 @@ instance Functor Tree where
   fmap g (Node l r) = Node (fmap g l) (fmap g r)
 
 instance Traversable Tree where
-  -- traverse :: Applicative f => ( a -> f b) -> Tree a -> Tree b
+  -- traverse :: Applicative f => ( a -> f b) -> Tree a -> f (Tree b)
   traverse p (Leaf a) = pure Leaf <*> p a
   traverse p (Node l r) = pure Node <*> traverse p l <*> traverse p r
 
@@ -316,3 +316,91 @@ instance Traversable Tree where
     doing so is that we are then provided with a number of useful functions for effectful programming
     with the type, by means of the default definitions in the Traversable class.
 -}
+
+{-
+        Exercises
+-}
+
+{-
+    Complete the following instance declaration from Data.Monoid to make a pair type into a monoid
+    provided the two component types are monoids:
+-}
+instance (Monoid a, Monoid b) => Monoid (a, b) where
+  -- mempty :: (a,b)
+  mempty = (mempty, mempty)
+
+  -- mappend :: (a,b) -> (a,b) -> (a,b)
+  mappend (a1, b1) (a2, b2) = (a1 `mappend` a2, b1 `mappend` b2)
+
+{-
+    In a similar manner, show how a function type a -> b can be made into a monoid provided that
+    the result type b is a monid.
+-}
+instance (Monoid b) => Monoid (a -> b) where
+  -- mempty :: a -> b
+  mempty _ = mempty :: b
+
+  -- mappend :: (a -> b) -> (a -> b) -> (a -> b)
+  mappend f1 f2 x = f1 x `mappend` f2 x
+
+{-
+    Show how the Maybe type can be made foldable and traversable, by giving explicit definitions for
+    fold, foldMap, foldr, foldl and traverse.
+-}
+instance Foldable Maybe where
+  -- fold :: Monoid a => Maybe a -> a
+  fold Nothing = mempty :: a
+  fold (Just x) = x
+
+  -- foldMap :: Monoid b => (a -> b) -> Maybe a -> b
+  foldMap _ Nothing = mempty :: b
+  foldMap f (Just x) = f x
+
+  -- foldr :: (a -> b -> b) -> b -> Maybe a -> b
+  foldr _ v Nothing = v
+  foldr f v (Just x) = f x v
+
+  -- foldl :: (a -> b -> b) -> a -> Maybe b -> a
+  foldl _ v Nothing = v
+  foldl f v (Just x) = f v x
+
+instance Traversable Maybe where
+  -- traverse :: Applicative f => (a -> f b) -> Maybe a -> f (Maybe b)
+  traverse _ Nothing = pure Nothing
+  traverse f (Just x) = pure Just <*> f x
+
+{-
+    In a similar manner, show how the following type of binary trees with data in their nodes can be
+    made into a foldable and traversable type:
+-}
+data ETree a = ELeaf | ENode (ETree a) a (ETree a) deriving (Show)
+
+instance Foldable ETree where
+  -- fold :: Monoid a => ETree a -> a
+  fold _ ELeaf = mempty :: a
+  fold f (ENode l a r) = fold f l `mappend` f a `mappend` fold f r
+
+  -- foldMap :: Monoid b => (a -> b) -> ETree a -> b
+  foldMap _ ELeaf = mempty :: b
+  foldMap f (ENode l a r) = foldMap f l `mappend` f a `mappend` foldMap f r
+
+-- foldr :: (a -> b -> b) -> b -> ETree a -> b
+foldr _ v ELeaf = v
+foldr f v (ENode l a r) = Main.foldr f (f (Main.foldr f v l) a) r
+
+-- foldl :: (a -> b -> b) -> a -> ETree b -> a
+foldl _ v ELeaf = v
+foldl f v (ENode l a r) = Main.foldl f (f (Main.foldl f v r) a) l
+
+instance Traversable ETree
+
+-- traverse :: Applicative f => (a -> f b) -> ETree a -> f (ETree b)
+traverse _ ELeaf = pure ELeaf
+traverse f (ENode l a r) = Main.traverse f l <*> pure a <*> Main.traverse f r
+
+{-
+    Using foldMap, define a generic version of the higher-order function filter on lists that can be
+    used with any foldable type:
+-}
+filterF :: (Foldable t) => (a -> Bool) -> t a -> [a]
+filterF p ta = foldMap (\x -> if p x then [p] else []) ta
