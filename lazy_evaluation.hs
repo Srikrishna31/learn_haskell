@@ -248,7 +248,7 @@ foldl' f v (x : xs) = (Main.foldl' f $! (f v x)) xs
     the use of the type Integer of arbitrary-precision integers above.
 -}
 fibs :: [Integer]
-fibs = [x | x <- [0, 1]]
+fibs = 0 : 1 : [a + b | (a, b) <- zip fibs (tail fibs)] -- taken from chatGPT.
 
 {-
     Define appropriate versions of the library functions
@@ -266,14 +266,41 @@ fibs = [x | x <- [0, 1]]
 -}
 data Tree a = Leaf | Node (Tree a) a (Tree a) deriving (Show)
 
+repeat' :: a -> Tree a
+repeat' x = Node (repeat' x) x (repeat' x)
+
+take'' :: Int -> Tree a -> [a]
+take'' n nd = vs
+  where
+    (vs, _) = go n nd
+
+    go :: Int -> Tree a -> ([a], Int)
+    go 0 _ = ([], 0)
+    go n Leaf = ([], n)
+    go n (Node l a r) = (a : (ltree ++ rtree), final)
+      where
+        (ltree, rem) = (go $! (n - 1)) l
+        (rtree, final) = if rem == n then (go $! (rem - 1)) r else go rem r -- somehow the right part of the tree is not being considered properly in this implementation.
+
+replicate'' :: Int -> a -> [a]
+replicate'' n = take'' n . repeat'
+
 {-
-    Newton's method for computing the square root of a (non-negative) floating-point number n can be expressed as follows:
-        * start with an initial approximation to the result;
+    Newton's method for computeing square root of a (non-negative) floating-point number n can be expressed as follows:
+        * start with an initial approximation to the result.
         * given the current approximation a, the next approximation is defined by the function next a = (a + n/a) / 2;
         * repeat the second step until the two most recent approximations are within some desired distance of one another, at
         which point the most recent value is returned as the result.
 
-    Define a function sqroot :: Double -> Double that implements this procedure.
-    Hint: First produce an infinite list of approximations using the library function iterate. For simplicity, take the number 1.0 as
-    the initial approximation, and 0.00001 as the distance value.
+    Define a function sqroot :: Double -> Double that implements this procedure. Hint: first produce an infinite list of approximations
+    using the library function iterate. For simplicity take the number 1.0 as the initial approximation, and 0.00001 as the distance value.
 -}
+
+sqroot :: Double -> Double
+sqroot n = r2
+  where
+    (r1, r2) = head (dropWhile (\(x1, x2) -> abs (x1 - x2) > 0.0001) approxPairs)
+    approxPairs = zip nApprox (tail nApprox)
+    nApprox = approx n
+    approx :: Double -> [Double]
+    approx n = iterate (\a -> (a + n / a) / 2) 1.0
